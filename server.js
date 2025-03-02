@@ -53,16 +53,15 @@ app.post('/api/ocr/base64', async (req, res) => {
   }
 });
 
-// OCR processing function using current Tesseract.js API
+// OCR processing function using Tesseract.js v4 API
 async function processOCR(imagePath) {
-  const worker = await createWorker();
+  // createWorker is now async in v4
+  const worker = await createWorker('eng');
   
-  // For newer versions of Tesseract.js
-  await worker.load();
-  await worker.loadLanguage('eng');
-  await worker.initialize('eng');
-  
+  // In v4, recognize directly without loading or initializing
   const { data } = await worker.recognize(imagePath);
+  
+  // Always terminate to free resources
   await worker.terminate();
   
   return data.text;
