@@ -21,6 +21,7 @@ This service provides an API endpoint that processes images containing text (suc
 **Endpoint:** `POST /api/ocr/base64`
 
 **Request Body:**
+
 ```json
 {
   "image": "data:image/jpeg;base64,<base64-encoded-image-data>"
@@ -28,6 +29,7 @@ This service provides an API endpoint that processes images containing text (suc
 ```
 
 **Response:**
+
 ```json
 {
   "text": "Extracted text from the image"
@@ -35,6 +37,7 @@ This service provides an API endpoint that processes images containing text (suc
 ```
 
 **Error Response:**
+
 ```json
 {
   "error": "Error message"
@@ -51,22 +54,25 @@ This service provides an API endpoint that processes images containing text (suc
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/trucking-ocr-service.git
 cd trucking-ocr-service
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Start the development server:
+
 ```bash
 npm start
 ```
 
-The server will be running at http://localhost:3000.
+The server will be running at <http://localhost:3000>.
 
 ### Environment Variables
 
@@ -77,11 +83,13 @@ The server will be running at http://localhost:3000.
 This service is deployed on Heroku. To deploy your own instance:
 
 1. Create a Heroku app:
+
 ```bash
 heroku create your-app-name
 ```
 
 2. Deploy to Heroku:
+
 ```bash
 git push heroku main
 ```
