@@ -1,39 +1,19 @@
-// src/services/ocrService.js
-const Queue = require('bull');
+// src/services/ocrService.js (No Redis Version - Fixed)
 const { createWorker } = require('tesseract.js');
 const sharp = require('sharp');
 const fs = require('fs').promises;
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fileService = require('./fileService');
 const classificationService = require('./classificationService');
 const logger = require('../utils/logger');
 
-// Create OCR processing queue
-const ocrQueue = new Queue('OCR processing', {
-  redis: {
-    port: process.env.REDIS_PORT || 6379,
-    host: process.env.REDIS_HOST || 'localhost',
-    password: process.env.REDIS_PASSWORD,
-  },
-  defaultJobOptions: {
-    removeOnComplete: 10, // Keep 10 completed jobs
-    removeOnFail: 25,     // Keep 25 failed jobs
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-  },
-});
-
-// Job status storage (use Redis in production)
+// In-memory job storage (replace with Redis later)
 const jobStatuses = new Map();
 let tesseractWorker = null;
 
 class OCRService {
   /**
-   * Initialize the service
+   * Initialize the service (no Redis required)
    */
   static async initialize() {
     try {
@@ -49,15 +29,7 @@ class OCRService {
         }
       });
 
-      logger.info({ message: 'Tesseract worker initialized' });
-
-      // Set up queue processing
-      ocrQueue.process('processImage', 3, this.processImageJob.bind(this));
-
-      // Set up queue event handlers
-      this.setupQueueEventHandlers();
-
-      logger.info({ message: 'OCR service initialized' });
+      logger.info({ message: 'OCR service initialized (in-memory mode)' });
     } catch (error) {
       logger.error({ 
         error: error.message, 
@@ -68,7 +40,7 @@ class OCRService {
   }
 
   /**
-   * Start OCR processing job
+   * Start OCR processing (immediate processing, no queue)
    */
   static async startProcessing(uploadId, correlationId) {
     try {
@@ -100,22 +72,22 @@ class OCRService {
 
       jobStatuses.set(jobId, jobStatus);
 
-      // Add job to queue
-      const job = await ocrQueue.add('processImage', {
-        jobId,
-        uploadId,
-        correlationId,
-        imagePath: session.combinedPath,
-        filename: session.filename,
-      }, {
-        jobId, // Use our jobId as Bull job ID
+      // Start processing immediately (no queue)
+      setImmediate(() => {
+        this.processImageJob({
+          jobId,
+          uploadId,
+          correlationId,
+          imagePath: session.combinedPath,
+          filename: session.filename,
+        });
       });
 
       logger.info({ 
         jobId, 
         uploadId, 
         correlationId,
-        message: 'OCR job queued' 
+        message: 'OCR job started' 
       });
 
       return jobId;
@@ -131,11 +103,9 @@ class OCRService {
   }
 
   /**
-   * Process image job (Bull queue processor)
+   * Process image job (direct processing)
    */
-  static async processImageJob(job) {
-    const { jobId, uploadId, correlationId, imagePath, filename } = job.data;
-
+  static async processImageJob({ jobId, uploadId, correlationId, imagePath, filename }) {
     logger.info({ 
       jobId, 
       uploadId, 
@@ -169,8 +139,7 @@ class OCRService {
       });
 
       const extractedText = await this.extractTextFromImage(optimizedPath, correlationId, (progress) => {
-        // Update progress during OCR
-        const ocrProgress = 0.3 + (progress * 0.4); // 30% to 70%
+        const ocrProgress = 0.3 + (progress * 0.4);
         this.updateJobStatus(jobId, { progress: ocrProgress });
       });
 
@@ -217,14 +186,12 @@ class OCRService {
         message: 'OCR job completed successfully' 
       });
 
-      return result;
     } catch (error) {
       logger.error({ 
         jobId, 
         uploadId, 
         correlationId,
         error: error.message,
-        stack: error.stack,
         message: 'OCR job failed' 
       });
 
@@ -236,8 +203,6 @@ class OCRService {
           message: error.message,
         },
       });
-
-      throw error;
     }
   }
 
@@ -245,32 +210,11 @@ class OCRService {
    * Get job status
    */
   static async getJobStatus(jobId) {
-    const status = jobStatuses.get(jobId);
-    if (!status) {
-      return null;
-    }
-
-    // Also check Bull queue status for additional info
-    try {
-      const bullJob = await ocrQueue.getJob(jobId);
-      if (bullJob) {
-        // Merge Bull job info if available
-        return {
-          ...status,
-          queuePosition: await bullJob.getPosition(),
-          attempts: bullJob.attemptsMade,
-          maxAttempts: bullJob.opts.attempts,
-        };
-      }
-    } catch (err) {
-      // Bull job might not exist, that's ok
-    }
-
-    return status;
+    return jobStatuses.get(jobId) || null;
   }
 
   /**
-   * Cancel job
+   * Cancel job (in-memory version)
    */
   static async cancelJob(jobId) {
     try {
@@ -283,13 +227,7 @@ class OCRService {
         throw new Error(`Cannot cancel ${status.status} job`);
       }
 
-      // Cancel in Bull queue
-      const bullJob = await ocrQueue.getJob(jobId);
-      if (bullJob) {
-        await bullJob.remove();
-      }
-
-      // Update status
+      // Update status (no Bull queue to cancel from)
       await this.updateJobStatus(jobId, {
         status: 'cancelled',
         completedAt: new Date().toISOString(),
@@ -420,35 +358,6 @@ class OCRService {
   }
 
   /**
-   * Setup queue event handlers
-   */
-  static setupQueueEventHandlers() {
-    ocrQueue.on('completed', (job, result) => {
-      logger.info({ 
-        jobId: job.id,
-        processingTime: Date.now() - job.timestamp,
-        message: 'Job completed' 
-      });
-    });
-
-    ocrQueue.on('failed', (job, err) => {
-      logger.error({ 
-        jobId: job.id,
-        error: err.message,
-        attempts: job.attemptsMade,
-        message: 'Job failed' 
-      });
-    });
-
-    ocrQueue.on('stalled', (job) => {
-      logger.warn({ 
-        jobId: job.id,
-        message: 'Job stalled' 
-      });
-    });
-  }
-
-  /**
    * Get error code from error
    */
   static getErrorCode(error) {
@@ -482,26 +391,16 @@ class OCRService {
   }
 
   /**
-   * Get service statistics
+   * Get service statistics (in-memory version)
    */
   static async getStats() {
-    const waiting = await ocrQueue.getWaiting();
-    const active = await ocrQueue.getActive();
-    const completed = await ocrQueue.getCompleted();
-    const failed = await ocrQueue.getFailed();
-
     return {
-      queue: {
-        waiting: waiting.length,
-        active: active.length,
-        completed: completed.length,
-        failed: failed.length,
-      },
       jobs: {
         total: jobStatuses.size,
         active: Array.from(jobStatuses.values()).filter(j => j.status === 'active').length,
         completed: Array.from(jobStatuses.values()).filter(j => j.status === 'completed').length,
         failed: Array.from(jobStatuses.values()).filter(j => j.status === 'failed').length,
+        cancelled: Array.from(jobStatuses.values()).filter(j => j.status === 'cancelled').length,
       },
     };
   }
@@ -515,8 +414,6 @@ class OCRService {
     if (tesseractWorker) {
       await tesseractWorker.terminate();
     }
-    
-    await ocrQueue.close();
   }
 }
 
