@@ -52,11 +52,13 @@ class MemoryStore {
 // Global memory store instance
 const memoryStore = new MemoryStore();
 
-// Cleanup expired entries every 5 minutes
-setInterval(() => {
-  memoryStore.cleanup();
-}, 5 * 60 * 1000);
-
+// Only start cleanup interval in production
+if (process.env.NODE_ENV !== 'test') {
+  // Cleanup expired entries every 5 minutes
+  setInterval(() => {
+    memoryStore.cleanup();
+  }, 5 * 60 * 1000);
+}
 /**
  * Create rate limiter middleware
  */
