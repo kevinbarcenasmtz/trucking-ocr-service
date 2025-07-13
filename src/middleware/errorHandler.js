@@ -1,6 +1,5 @@
 // src/middleware/errorHandler.js
 const { logError, logSecurityEvent } = require('../utils/logger');
-
 /**
  * Custom error class for application-specific errors
  */

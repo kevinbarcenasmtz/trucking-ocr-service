@@ -1,5 +1,5 @@
 // src/services/classificationService.js
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 class ClassificationService {
   /**

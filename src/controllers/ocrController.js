@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const ocrService = require('../services/ocrService');
 const fileService = require('../services/fileService');
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 // Configure multer for chunk uploads
 const storage = multer.diskStorage({

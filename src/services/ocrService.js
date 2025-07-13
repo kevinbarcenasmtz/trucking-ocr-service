@@ -5,7 +5,7 @@ const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const fileService = require('./fileService');
 const classificationService = require('./classificationService');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 // In-memory job storage (replace with Redis later)
 const jobStatuses = new Map();

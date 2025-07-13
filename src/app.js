@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const { correlationIdMiddleware } = require('./middleware/correlationId');
 const { errorHandler } = require('./middleware/errorHandler');
 const { createRateLimiter } = require('./middleware/rateLimiter');
-const logger = require('./utils/logger');
+const {logger} = require('./utils/logger');
 
 const app = express();
 

@@ -227,10 +227,10 @@ module.exports = {
   // Main logger instance
   logger,
   
-  // Helper functions
+  // Helper functions (these need to be exported!)
   createStructuredLogger,
   logRequest,
-  logError,
+  logError,           // ← This was missing!
   logPerformance,
   logSecurityEvent,
   logHealthCheck,

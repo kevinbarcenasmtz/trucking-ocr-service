@@ -2,7 +2,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 // In-memory session storage (use Redis in production)
 const uploadSessions = new Map();
