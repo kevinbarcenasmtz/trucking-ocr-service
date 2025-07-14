@@ -2,3 +2,6 @@
 .env.local
 node_modules/
 development_documentation/
+logs/
+eng.traineddata
+uploads/
