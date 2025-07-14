@@ -1,5 +1,5 @@
 // src/controllers/ocrController.js
-const multer = require('multer');
+// const multer = require('multer');
 const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const asyncHandler = require('express-async-handler');
@@ -10,22 +10,22 @@ const fileService = require('../services/fileService');
 const {logger} = require('../utils/logger');
 
 // Configure multer for chunk uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'temp/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${uuidv4()}-chunk`;
-    cb(null, uniqueName);
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, 'temp/');
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueName = `${Date.now()}-${uuidv4()}-chunk`;
+//     cb(null, uniqueName);
+//   },
+// });
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB per chunk
-  },
-});
+// const upload = multer({
+//   storage,
+//   limits: {
+//     fileSize: 2 * 1024 * 1024, // 2MB per chunk
+//   },
+// });
 
 /**
  * Create upload session
@@ -77,13 +77,11 @@ const createUploadSession = asyncHandler(async (req, res) => {
  * Upload file chunk
  * POST /api/ocr/chunk
  */
-const uploadChunk = [
-  upload.single('chunk'),
-  asyncHandler(async (req, res) => {
+const uploadChunk = asyncHandler(async (req, res) => {
     const { uploadId, chunkIndex, totalChunks } = req.body;
     const correlationId = req.correlationId;
 
-    // Validate input
+    // Validate input (these should already be validated by middleware)
     if (!uploadId || chunkIndex === undefined || !totalChunks) {
       res.status(400);
       throw new Error('uploadId, chunkIndex, and totalChunks are required');
@@ -156,8 +154,9 @@ const uploadChunk = [
       totalChunks: totalChunksNum,
       complete: receivedChunks === totalChunksNum,
     });
-  }),
-];
+  });
+
+
 
 /**
  * Start OCR processing

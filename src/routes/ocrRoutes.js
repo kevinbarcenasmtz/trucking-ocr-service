@@ -1,5 +1,7 @@
 // src/routes/ocrRoutes.js
 const express = require('express');
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 const { ocrValidation } = require('../middleware/requestValidation');
 const {
   createUploadSession,
@@ -10,6 +12,25 @@ const {
 } = require('../controllers/ocrController');
 
 const router = express.Router();
+
+// Configure multer for chunk uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'temp/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${uuidv4()}-chunk`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB per chunk
+  },
+});
+
 
 /**
  * OCR Upload and Processing Routes
@@ -23,8 +44,9 @@ router.post('/upload',
 
 // POST /api/ocr/chunk - Upload file chunk
 router.post('/chunk', 
-  ...ocrValidation.uploadChunk,
-  uploadChunk
+  upload.single('chunk'),              // Run multer FIRST to parse multipart data
+  ...ocrValidation.uploadChunk,        // Then validate the parsed fields
+  uploadChunk                          // Finally handle the request
 );
 
 // POST /api/ocr/process - Start OCR processing on uploaded file

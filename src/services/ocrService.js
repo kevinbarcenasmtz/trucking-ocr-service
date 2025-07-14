@@ -311,13 +311,8 @@ class OCRService {
         tessedit_pageseg_mode: '6', // Assume uniform block of text
       });
 
-      const { data: { text, confidence } } = await tesseractWorker.recognize(imagePath, {
-        logger: (m) => {
-          if (m.status === 'recognizing text' && onProgress) {
-            onProgress(m.progress);
-          }
-        }
-      });
+      // Remove the logger option - it can't be serialized for the worker
+      const { data: { text, confidence } } = await tesseractWorker.recognize(imagePath);
 
       logger.info({ 
         correlationId,
